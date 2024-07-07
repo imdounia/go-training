@@ -6,6 +6,7 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/360EntSecGroup-Skylar/excelize"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -33,8 +34,7 @@ func main() {
 		fmt.Println("3. Modifier un produit")
 		fmt.Println("4. Supprimer un produit")
 		fmt.Println("5. Exporter les informations produits dans un fichier Excel (en .xlsx)")
-		fmt.Println("6. Exporter les informations produits dans un fichier Excel (en .xlsx)")
-		fmt.Println("7. Lancer un serveur Http avec une page web")
+		fmt.Println("6. Lancer un serveur Http avec une page web")
 		fmt.Println("7. Se connecter à une VM en ssh")
 		fmt.Println("8. Se connecter à un serveur FTP")
 		fmt.Println("9. Lancer l'interface graphique")
@@ -53,6 +53,8 @@ func main() {
 		case "4":
 			deleteProduct(db)
 		case "5":
+			exportProducts(db)
+		case "6":
 			return
 		default:
 			fmt.Println("Choix invalide, veuillez réessayer !")
@@ -159,7 +161,7 @@ func deleteProduct(db *sql.DB) {
 		fmt.Println("L'id doit être un entier !")
 	}
 
-	query := "DELETE FROM users WHERE id = ?"
+	query := "DELETE FROM product WHERE id = ?"
 
 	_, err = db.Exec(query, id)
 	if err != nil {
@@ -167,4 +169,47 @@ func deleteProduct(db *sql.DB) {
 	}
 
 	fmt.Println("Suppression réussie !")
+}
+
+func exportProducts(db *sql.DB) {
+	rows, err := db.Query("SELECT id, name, description, price FROM product")
+	if err != nil {
+		log.Fatalf("Erreur lors de la lecture des produits : %s", err)
+	}
+	defer rows.Close()
+
+	xlsx := excelize.NewFile()
+	sheetName := "Sheet1"
+	xlsx.SetSheetName("Sheet1", sheetName)
+
+	xlsx.SetCellValue(sheetName, "A1", "ID")
+	xlsx.SetCellValue(sheetName, "B1", "Name")
+	xlsx.SetCellValue(sheetName, "C1", "Description")
+	xlsx.SetCellValue(sheetName, "D1", "Price")
+
+	rowIndex := 2
+	for rows.Next() {
+		var id int
+		var name, description string
+		var price float64
+
+		err := rows.Scan(&id, &name, &description, &price)
+		if err != nil {
+			log.Fatalf("Erreur lors du scan des données : %s", err)
+		}
+
+		xlsx.SetCellValue(sheetName, fmt.Sprintf("A%d", rowIndex), id)
+		xlsx.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIndex), name)
+		xlsx.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIndex), description)
+		xlsx.SetCellValue(sheetName, fmt.Sprintf("D%d", rowIndex), price)
+
+		rowIndex++
+	}
+
+	err = xlsx.SaveAs("products_export.xlsx")
+	if err != nil {
+		log.Fatalf("Erreur lors de la sauvegarde du fichier Excel : %s", err)
+	}
+
+	fmt.Println("Exportation des produits vers un fichier Excel réussie")
 }
