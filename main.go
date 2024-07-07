@@ -1,18 +1,24 @@
 package main
 
 import (
+	"bufio"
 	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 
 	"github.com/360EntSecGroup-Skylar/excelize"
 	_ "github.com/go-sql-driver/mysql"
+	"golang.org/x/crypto/ssh"
 )
 
 func main() {
 	var choice string
+
+	reader := bufio.NewReader(os.Stdin)
 
 	dbInfos := "root:@tcp(127.0.0.1:3306)/produits"
 
@@ -58,6 +64,8 @@ func main() {
 		case "6":
 			startServerHTTP()
 		case "7":
+			connectToVMViaSHH(reader)
+		case "8":
 			return
 		default:
 			fmt.Println("Choix invalide, veuillez réessayer !")
@@ -222,4 +230,36 @@ func startServerHTTP() {
 
 	fmt.Println("Serveur HTTP démarré sur le port 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func connectToVMViaSHH(reader *bufio.Reader) {
+	fmt.Println("Connectez-vous à la VM via SSH :")
+	fmt.Print("Adresse IP de la VM : ")
+	ipAddress, _ := reader.ReadString('\n')
+	ipAddress = strings.TrimSpace(ipAddress)
+
+	fmt.Print("Nom d'utilisateur : ")
+	username, _ := reader.ReadString('\n')
+	username = strings.TrimSpace(username)
+
+	fmt.Print("Mot de passe : ")
+	password, _ := reader.ReadString('\n')
+	password = strings.TrimSpace(password)
+
+	config := &ssh.ClientConfig{
+		User: username,
+		Auth: []ssh.AuthMethod{
+			ssh.Password(password),
+		},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+
+	conn, err := ssh.Dial("tcp", ipAddress+":2222", config)
+	if err != nil {
+		fmt.Println("Erreur lors de la connexion SSH :", err)
+		return
+	}
+	defer conn.Close()
+
+	fmt.Println("Connexion SSH réussie à la VM.")
 }
