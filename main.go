@@ -9,9 +9,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/360EntSecGroup-Skylar/excelize"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/jlaffaye/ftp"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -44,8 +46,7 @@ func main() {
 		fmt.Println("6. Lancer un serveur Http avec une page web")
 		fmt.Println("7. Se connecter à une VM en ssh")
 		fmt.Println("8. Se connecter à un serveur FTP")
-		fmt.Println("9. Lancer l'interface graphique")
-		fmt.Println("10. Quitter")
+		fmt.Println("9. Quitter")
 		fmt.Println("Veuillez sélectionner une option :")
 
 		fmt.Scan(&choice)
@@ -64,8 +65,10 @@ func main() {
 		case "6":
 			startServerHTTP()
 		case "7":
-			connectToVMViaSHH(reader)
+			connectToVMViaSSH(reader)
 		case "8":
+			connectToFTP(reader)
+		case "9":
 			return
 		default:
 			fmt.Println("Choix invalide, veuillez réessayer !")
@@ -232,7 +235,7 @@ func startServerHTTP() {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func connectToVMViaSHH(reader *bufio.Reader) {
+func connectToVMViaSSH(reader *bufio.Reader) {
 	fmt.Println("Connectez-vous à la VM via SSH :")
 	fmt.Print("Adresse IP de la VM : ")
 	ipAddress, _ := reader.ReadString('\n')
@@ -262,4 +265,40 @@ func connectToVMViaSHH(reader *bufio.Reader) {
 	defer conn.Close()
 
 	fmt.Println("Connexion SSH réussie à la VM.")
+}
+
+func connectToFTP(reader *bufio.Reader) {
+	fmt.Print("Hôte FTP : ")
+	host, _ := reader.ReadString('\n')
+	host = strings.TrimSpace(host)
+
+	fmt.Print("Port FTP : ")
+	portStr, _ := reader.ReadString('\n')
+	portStr = strings.TrimSpace(portStr)
+	port := "21"
+	if portStr != "" {
+		port = portStr
+	}
+
+	fmt.Print("Nom d'utilisateur : ")
+	username, _ := reader.ReadString('\n')
+	username = strings.TrimSpace(username)
+
+	fmt.Print("Mot de passe : ")
+	password, _ := reader.ReadString('\n')
+	password = strings.TrimSpace(password)
+
+	c, err := ftp.Dial(host+":"+port, ftp.DialWithTimeout(5*time.Second))
+	if err != nil {
+		fmt.Println("Erreur lors de la connexion au serveur FTP :", err)
+		return
+	}
+
+	err = c.Login(username, password)
+	if err != nil {
+		fmt.Println("Erreur lors de la connexion avec nom d'utilisateur et mot de passe :", err)
+		return
+	}
+
+	fmt.Println("Connecté au serveur FTP avec succès !")
 }
