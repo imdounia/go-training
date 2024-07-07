@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/http"
 	"strconv"
 
 	"github.com/360EntSecGroup-Skylar/excelize"
@@ -55,6 +56,8 @@ func main() {
 		case "5":
 			exportProducts(db)
 		case "6":
+			startServerHTTP()
+		case "7":
 			return
 		default:
 			fmt.Println("Choix invalide, veuillez réessayer !")
@@ -212,4 +215,11 @@ func exportProducts(db *sql.DB) {
 	}
 
 	fmt.Println("Exportation des produits vers un fichier Excel réussie")
+}
+
+func startServerHTTP() {
+	http.Handle("/", http.FileServer(http.Dir("./")))
+
+	fmt.Println("Serveur HTTP démarré sur le port 8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
